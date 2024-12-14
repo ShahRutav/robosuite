@@ -140,8 +140,8 @@
 															<inertial pos="0.0060733 0.0018907 -0.084578" quat="0.647336 -0.27161 -0.257721 0.6639" mass="0.53221" diaginertia="0.000319947 0.000196296 0.000182477" />
 															<joint name="r_wrist_pitch" pos="0 0 0" axis="0.0 1.0 0.0" range="-1.5 1.5" />
 															<body name="right_eef" pos="0 0 0" quat="-0.707107 0 0 0.707107">
-																
-																
+
+
 																<body name="right_mount" quat="0 0 1 0" />
 																<body name="right_hand_eef" pos="0 0 0" />
 																<camera mode="fixed" name="eye_in_right_hand" pos="-0.05 0.15 0.0" quat="0.965926 -0.258819 0.000000 0.000000" fovy="75" />
