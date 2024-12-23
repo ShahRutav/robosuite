@@ -304,6 +304,9 @@ if __name__ == "__main__":
         from robosuite.devices.mjgui import MJGUI
 
         device = MJGUI(env=env)
+    elif args.device == "oculus":
+        from robosuite.devices.oculus import Oculus
+        device = Oculus(env=env)
     else:
         raise Exception("Invalid device choice: choose either 'keyboard' or 'spacemouse'.")
 

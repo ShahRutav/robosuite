@@ -9,7 +9,6 @@ class Demo(ManipulatorModel):
 
     def __init__(self, idn=0):
         super().__init__(xml_path_completion("robots/demo/robot.xml"), idn=idn)
-        self.set_joint_attribute(attrib="damping", values=np.array((10.0,)*6))
 
     # -------------------------------------------------------------------------------------- #
     # -------------------------- Private Properties ---------------------------------------- #

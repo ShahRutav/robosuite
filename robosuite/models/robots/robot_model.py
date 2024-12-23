@@ -240,7 +240,6 @@ class RobotModel(MujocoXMLModel, metaclass=RobotModelMeta):
         root = find_elements(root=self.worldbody, tags="body", return_first=True)
         for body in leg_base.worldbody:
             root.append(body)
-        # import pdb; pdb.set_trace()
 
         arm_root = find_elements(root=self.worldbody, tags="body", return_first=False)[1]
 
