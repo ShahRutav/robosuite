@@ -33,6 +33,7 @@ class DataCollectionWrapper(Wrapper):
         self.states = []
         self.action_infos = []  # stores information about actions taken
         self.successful = False  # stores success state of demonstration
+        self.obs = []  # stores observations
 
         # how often to save simulation state, in terms of environment steps
         self.collect_freq = collect_freq
@@ -116,6 +117,9 @@ class DataCollectionWrapper(Wrapper):
         assert len(self.states) == 0
         self.states.append(self._current_task_instance_state)
 
+        assert len(self.obs) == 0
+        self.obs.append(self.env._get_observations())
+
     def _flush(self):
         """
         Method to flush internal state to disk.
@@ -131,9 +135,11 @@ class DataCollectionWrapper(Wrapper):
             states=np.array(self.states),
             action_infos=self.action_infos,
             successful=self.successful,
+            obs=self.obs,
             env=env_name,
         )
         self.states = []
+        self.obs = []
         self.action_infos = []
         self.successful = False
 
@@ -174,6 +180,8 @@ class DataCollectionWrapper(Wrapper):
         if self.t % self.collect_freq == 0:
             state = self.env.sim.get_state().flatten()
             self.states.append(state)
+
+            self.obs.append(self.env._get_observations())
 
             info = {}
             info["actions"] = np.array(action)

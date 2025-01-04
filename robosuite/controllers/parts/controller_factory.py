@@ -54,6 +54,7 @@ def load_part_controller_config(custom_fpath=None, default_controller=None):
         custom_fpath = os.path.join(
             os.path.dirname(__file__), "..", "config/default/parts/{}.json".format(default_controller.lower())
         )
+        print("Loading default controller config from: {}".format(custom_fpath))
 
     # Assert that the fpath to load the controller is not empty
     assert custom_fpath is not None, "Error: Either custom_fpath or default_controller must be specified!"

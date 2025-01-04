@@ -105,7 +105,7 @@ class Demo(ManipulatorModel):
     @property
     def default_controller_config(self):
         # Copied from panda.py
-        return {"right": "default_gr1"}
+        return {"right": "default_gr1_fixed_lower_body"}
 
     @property
     def init_qpos(self):
@@ -118,3 +118,19 @@ class Demo(ManipulatorModel):
     # @property
     # def key_map(self):
     #     return self._key_map
+
+class DemoTwoFingered(Demo):
+    @property
+    def default_gripper(self):
+        """
+        Since this is bimanual robot, returns dict with `'right'`, `'left'` keywords corresponding to their respective
+        values
+
+        Returns:
+            dict: Dictionary containing arm-specific gripper names
+        """
+        return {"right": "PandaGripper", "left": "PandaGripper"}
+
+    @property
+    def gripper_mount_quat_offset(self):
+        return {"right": [0.4395489, 0.8790978, 0, -0.1843469], "left": [0.0, 1.0, 0.0, 0.0]}

@@ -52,6 +52,7 @@ def collect_human_trajectory(env, device, arm, max_fr):
         for robot in env.robots
     ]
 
+    success = False
     # Loop until we get a reset from the input or the task completes
     while True:
         start = time.time()
@@ -95,6 +96,7 @@ def collect_human_trajectory(env, device, arm, max_fr):
 
         # Also break if we complete the task
         if task_completion_hold_count == 0:
+            success = True
             break
 
         # state machine to check for having a success for 10 consecutive timesteps
@@ -115,7 +117,7 @@ def collect_human_trajectory(env, device, arm, max_fr):
 
     # cleanup for end of data collection episodes
     env.close()
-
+    return success
 
 def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
     """
@@ -159,6 +161,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
         state_paths = os.path.join(directory, ep_directory, "state_*.npz")
         states = []
         actions = []
+        obs = []
         success = False
 
         for state_file in sorted(glob(state_paths)):
@@ -166,6 +169,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             env_name = str(dic["env"])
 
             states.extend(dic["states"])
+            obs.extend(dic["obs"])
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
             success = success or dic["successful"]
@@ -180,7 +184,9 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             # recorded the states and actions, the states were recorded AFTER playing that action,
             # so we end up with an extra state at the end.
             del states[-1]
+            del obs[-1]
             assert len(states) == len(actions)
+            assert len(obs) == len(actions)
 
             num_eps += 1
             ep_data_grp = grp.create_group("demo_{}".format(num_eps))
@@ -194,6 +200,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             # write datasets for states and actions
             ep_data_grp.create_dataset("states", data=np.array(states))
             ep_data_grp.create_dataset("actions", data=np.array(actions))
+            # write observations. Observations is dictionary of numpy arrays
+            obs_grp = ep_data_grp.create_group("observations")
+            for key, value in obs[0].items():
+                obs_grp.create_dataset(key, data=np.array([o[key] for o in obs]))
         else:
             print("Demonstration is unsuccessful and has NOT been saved")
 
@@ -230,6 +240,7 @@ if __name__ == "__main__":
         help="Choice of controller. Can be generic (eg. 'BASIC' or 'WHOLE_BODY_MINK_IK') or json file (see robosuite/controllers/config for examples)",
     )
     parser.add_argument("--device", type=str, default="keyboard")
+    parser.add_argument("--n_demos", type=int, default=50, help="Number of demonstrations to collect")
     parser.add_argument("--pos-sensitivity", type=float, default=1.0, help="How much to scale position user inputs")
     parser.add_argument("--rot-sensitivity", type=float, default=1.0, help="How much to scale rotation user inputs")
     parser.add_argument(
@@ -255,6 +266,8 @@ if __name__ == "__main__":
     if controller_config["type"] == "WHOLE_BODY_MINK_IK":
         # mink-speicific import. requires installing mink
         from robosuite.examples.third_party_controller.mink_controller import WholeBodyMinkIK
+    controller_config['body_parts']['right']['input_type'] = "absolute"
+    controller_config['body_parts']['right']['input_ref_frame'] = "world"
 
     # Create argument configuration
     config = {
@@ -316,6 +329,11 @@ if __name__ == "__main__":
     os.makedirs(new_dir)
 
     # collect demonstrations
+    valid_demos = 0
     while True:
-        collect_human_trajectory(env, device, args.arm, args.max_fr)
+        is_success = collect_human_trajectory(env, device, args.arm, args.max_fr)
         gather_demonstrations_as_hdf5(tmp_directory, new_dir, env_info)
+        if is_success:
+            valid_demos += 1
+        if valid_demos >= args.n_demos:
+            break
