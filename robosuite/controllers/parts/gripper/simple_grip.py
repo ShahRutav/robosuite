@@ -131,6 +131,13 @@ class SimpleGripController(GripperController):
 
         # Parse action based on the impedance mode, and update kp / kd as necessary
         delta = action
+        if len(delta) != self.control_dim:
+            # this is to support powergrasp, which only sends one action dimension
+            assert len(delta) == 1, (
+                f"We only broadcast the first action dimension, so the action dimension must be 1!"
+                f"Expected 1, got {len(delta)}"
+            )
+            delta = np.repeat(delta, self.control_dim, axis=-1)
 
         # Check to make sure delta is size self.joint_dim
         assert len(delta) == self.control_dim, (

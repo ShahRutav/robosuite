@@ -130,7 +130,33 @@ class DemoTwoFingered(Demo):
             dict: Dictionary containing arm-specific gripper names
         """
         return {"right": "PandaGripper", "left": "PandaGripper"}
+        # return {"right": "FourierRightHand", "left": "FourierLeftHand"}
 
     @property
     def gripper_mount_quat_offset(self):
-        return {"right": [0.4395489, 0.8790978, 0, -0.1843469], "left": [0.0, 1.0, 0.0, 0.0]}
+        if self.default_gripper.get("right") == "FourierRightHand":
+            return {"right": [0.0, 0.0, 0.0, 1.0], "left": [0.0, 0.0, 0.0, 1.0]}
+        #     # return {"right": [0.0, 0.0, 1.0, 0.0], "left": [0.0, 0.0, 1.0, 0.0]}
+        #     # return {"right": [0.7071068, 0, 0.0, 0.7071068], "left": [0.0, 0.0, 1.0, 0.0]}
+        #     # 0.6335811, 0, 0.6335811, 0.4440158
+        #     # return {"right": [0.6335811, 0.6335811, 0, 0.4440158], "left": [0.0, 0.0, 1.0, 0.0]}
+        elif self.default_gripper.get("right") == "PandaGripper":
+            return {"right": [0.4395489, 0.8790978, 0, -0.1843469], "left": [0.0, 1.0, 0.0, 0.0]}
+        else:
+            raise ValueError("Invalid gripper type specified!: {}".format(self.default_gripper.get("right")))
+
+class DemoSingleHand(Demo):
+    @property
+    def default_gripper(self):
+        """
+        Since this is bimanual robot, returns dict with `'right'`, `'left'` keywords corresponding to their respective
+        values
+
+        Returns:
+            dict: Dictionary containing arm-specific gripper names
+        """
+        return {"right": "FourierRightHand", "left": "FourierLeftHand"}
+
+    @property
+    def gripper_mount_quat_offset(self):
+        return {"right": [0.0, 0.0, 0.0, 1.0], "left": [0.0, 0.0, 1.0, 0.0]}

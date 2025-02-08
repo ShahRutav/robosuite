@@ -30,6 +30,8 @@ class DataCollectionWrapper(Wrapper):
         self.directory = directory
 
         # in-memory cache for simulation states and action info
+        self.initial_obj_qpos = None
+        self.initial_qpos = None
         self.states = []
         self.action_infos = []  # stores information about actions taken
         self.successful = False  # stores success state of demonstration
@@ -67,6 +69,8 @@ class DataCollectionWrapper(Wrapper):
         # timesteps in current episode
         self.t = 0
         self.has_interaction = False
+        self.initial_obj_qpos = None
+        self.initial_qpos = None
 
         # save the task instance (will be saved on the first env interaction)
 
@@ -130,12 +134,20 @@ class DataCollectionWrapper(Wrapper):
             env_name = self.env.unwrapped.__class__.__name__
         else:
             env_name = self.env.__class__.__name__
+
+        robot_indices = self.env.robots[0]._ref_joint_pos_indexes
+        non_robot_qpos_idx = set(range(self.env.sim.get_state().qpos.flatten().shape[0])) - set(robot_indices)
+        non_robot_qpos_idx = sorted(list(non_robot_qpos_idx))
+
         np.savez(
             state_path,
             states=np.array(self.states),
             action_infos=self.action_infos,
             successful=self.successful,
             obs=self.obs,
+            initial_obj_qpos=self.initial_obj_qpos.copy(),
+            initial_qpos=self.initial_qpos.copy(),
+            non_robot_qpos_idx=non_robot_qpos_idx,
             env=env_name,
         )
         self.states = []
@@ -152,6 +164,17 @@ class DataCollectionWrapper(Wrapper):
         """
         ret = super().reset()
         self._start_new_episode()
+
+        ## save the initial object qpos on the reset
+        assert self.initial_obj_qpos is None
+        self.initial_obj_qpos = {}
+        joint_list = [obj.joints for obj in self.env.model.mujoco_objects]
+        for _list in joint_list:
+            for joint in _list:
+                self.initial_obj_qpos[joint] = self.env.sim.data.get_joint_qpos(joint).copy()
+
+        self.initial_qpos = self.env.sim.get_state().qpos.copy()
+
         return ret
 
     def step(self, action):

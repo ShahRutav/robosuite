@@ -83,6 +83,7 @@
       <!-- <inertial diaginertia="0 0 0" mass="0" pos="0 0 0"/> -->
       <body name="eef" pos="0 0 0" quat="0.707 0. -0.707 0.">
           <site name="grip_site" pos="0 0 0" size="0.01 0.01 0.01" rgba="1 1 0 1" type="sphere" group="2"/>
+          <!-- <site name="grip_site" pos="0 0 0" quat="0.707105  0 0.707108 0" size="0.01 0.01 0.01" rgba="1 1 0 1" type="sphere" group="2"/> -->
           <site name="ee_x" pos="0.1 0 0" size="0.005 .1"  quat="0.707105  0 0.707108 0 " rgba="1 0 0 0" type="cylinder" group="1"/>
           <site name="ee_y" pos="0 0.1 0" size="0.005 .1" quat="0.707105 0.707108 0 0" rgba="0 1 0 0" type="cylinder" group="1"/>
           <site name="ee_z" pos="0 0 0.1" size="0.005 .1" quat="1 0 0 0" rgba="0 0 1 0" type="cylinder" group="1"/>
@@ -94,11 +95,12 @@
       <body name="r_palm" pos="0 0 0">
         <geom name="r_palm_vis" type="mesh" material="r_base_material" mesh="R_hand_base_link_vis" group="1" contype="0" conaffinity="0"/>
         <geom name="r_palm_col" type="mesh" mass="0.5" mesh="R_hand_base_link_col"/>
-        
+
         <!-- Thumb -->
         <body name="r_thumb" pos="0. 0. 0.">
           <body name="R_thumb_proximal_base_link" pos="0.021995 0.015502 -0.024995" quat="-3.67321e-06 1 0 0">
-            <joint name="R_thumb_proximal_yaw_joint" pos="0 0 0" axis="0 0 -1" range="0 1.74" actuatorfrcrange="-10 10" damping="1"/>
+            <!-- <joint name="R_thumb_proximal_yaw_joint" pos="0 0 0" axis="0 0 -1" range="0.0 1.74" actuatorfrcrange="-10 10" damping="1"/> -->
+            <joint name="R_thumb_proximal_yaw_joint" pos="0 0 0" axis="0 0 -1" range="2.0 2.01" actuatorfrcrange="-10 10" damping="1"/>
             <geom name="R_thumb_proximal_base_link_vis" type="mesh" material="r_thumb_material" mesh="R_thumb_proximal_base_link_vis" group="1" contype="0" conaffinity="0"/>
             <geom name="R_thumb_proximal_base_link_col" type="mesh" mass="0.5" mesh="R_thumb_proximal_base_link_col"/>
 
@@ -128,6 +130,7 @@
 
             <body name="R_index_intermediate_link" pos="0.031532 -0.0054551 0">
               <joint name="R_index_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 1.74" actuatorfrcrange="-10 10" damping="1"/>
+              <!-- <joint name="R_index_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 0.01" actuatorfrcrange="-10 10" damping="1"/> -->
               <geom name="R_index_intermediate_link_vis" type="mesh" material="r_index_material" mesh="R_index_intermediate_link_vis" group="1" contype="0" conaffinity="0"/>
               <geom name="R_index_intermediate_link_col" type="mesh" mass="0.5" mesh="R_index_intermediate_link_col"/>
               <site name="site_R_index_intermediate_link" size="0.01" material="site_right_hand"/>
@@ -147,6 +150,7 @@
 
             <body name="R_middle_intermediate_link" pos="0.031662 -0.0046408 0">
               <joint name="R_middle_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 1.74" actuatorfrcrange="-10 10" damping="1"/>
+              <!-- <joint name="R_middle_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 0.01" actuatorfrcrange="-10 10" damping="1"/> -->
               <geom name="R_middle_intermediate_link_vis" type="mesh" material="r_middle_material" mesh="R_middle_intermediate_link_vis" group="1" contype="0" conaffinity="0"/>
               <geom name="R_middle_intermediate_link_col" type="mesh" mass="0.5" mesh="R_middle_intermediate_link_col"/>
               <site name="site_R_middle_intermediate_link" size="0.01" material="site_right_hand"/>
@@ -165,6 +169,7 @@
             <site name="site_R_ring_proximal_link" size="0.01" material="site_right_hand"/>
             <body name="R_ring_intermediate_link" pos="0.031531 -0.0054572 0">
               <joint name="R_ring_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 1.74" actuatorfrcrange="-10 10" damping="1"/>
+              <!-- <joint name="R_ring_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 0.01" actuatorfrcrange="-10 10" damping="1"/> -->
               <geom name="R_ring_intermediate_link_vis" type="mesh" material="r_ring_material" mesh="R_ring_intermediate_link_vis" group="1" contype="0" conaffinity="0"/>
               <geom name="R_ring_intermediate_link_col" type="mesh" mass="0.5" mesh="R_ring_intermediate_link_col"/>
               <site name="site_R_ring_intermediate_link" size="0.01" material="site_right_hand"/>
@@ -182,6 +187,7 @@
             <site name="site_R_pinky_proximal_link" size="0.01" material="site_right_hand"/>
             <body name="R_pinky_intermediate_link" pos="0.031338 -0.0064763 0" quat="1 0 0 3.3988e-05">
               <joint name="R_pinky_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 1.74" actuatorfrcrange="-10 10" damping="1"/>
+              <!-- <joint name="R_pinky_intermediate_joint" pos="0 0 0" axis="0 0 -1" range="0 0.01" actuatorfrcrange="-10 10" damping="1"/> -->
               <geom name="R_pinky_intermediate_link_vis" type="mesh" material="r_pinky_material" mesh="R_pinky_intermediate_link_vis" group="1" contype="0" conaffinity="0"/>
               <geom name="R_pinky_intermediate_link_col" type="mesh" mass="0.5" mesh="R_pinky_intermediate_link_col"/>
               <site name="site_R_pinky_intermediate_link" size="0.01" material="site_right_hand"/>
@@ -197,15 +203,20 @@
   <actuator>
     <position joint="R_pinky_intermediate_joint" name="R_pinky_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="R_pinky_proximal_joint" name="R_pinky_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="R_ring_intermediate_joint" name="R_ring_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="R_ring_intermediate_joint" name="R_ring_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="R_ring_intermediate_joint" name="R_ring_intermediate_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="R_ring_proximal_joint" name="R_ring_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="R_middle_intermediate_joint" name="R_middle_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="R_middle_intermediate_joint" name="R_middle_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="R_middle_intermediate_joint" name="R_middle_intermediate_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="R_middle_proximal_joint" name="R_middle_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="R_index_intermediate_joint" name="R_index_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="R_index_intermediate_joint" name="R_index_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="R_index_intermediate_joint" name="R_index_intermediate_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="R_index_proximal_joint" name="R_index_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="R_thumb_distal_joint" name="R_thumb_distal_joint_drive" ctrlrange="0 1.23" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="R_thumb_distal_joint" name="R_thumb_distal_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/> -->
     <position joint="R_thumb_proximal_pitch_joint" name="R_thumb_proximal_pitch_joint_drive" ctrlrange="0 1.22" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="R_thumb_proximal_yaw_joint" name="R_thumb_proximal_yaw_joint_drive" ctrlrange="0 1.74"  kp="4" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="R_thumb_proximal_yaw_joint" name="R_thumb_proximal_yaw_joint_drive" ctrlrange="0 1.74"  kp="4" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="R_thumb_proximal_yaw_joint" name="R_thumb_proximal_yaw_joint_drive" ctrlrange="0 0.01"  kp="4" forcelimited="true" forcerange="-20 20"/>
   </actuator>
 
   <sensor>

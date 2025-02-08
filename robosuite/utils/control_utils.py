@@ -4,6 +4,36 @@ import robosuite.utils.transform_utils as trans
 from robosuite.utils.numba import jit_decorator
 
 
+
+def convert_delta_to_abs_action(delta_action, robot, arm, env=None):
+    # check if the class has an attribute function to convert delta to absolute action
+    if hasattr(robot.part_controllers[arm], "delta_to_abs_action"):
+        abs_action = robot.part_controllers[arm].delta_to_abs_action(delta_action[:-1], goal_update_mode="achieved")
+        abs_action = np.concatenate([abs_action, delta_action[6:]])
+    elif robot.composite_controller_config["type"] in ["WHOLE_BODY_IK", "WHOLE_BODY_MINK_IK"]:
+        ref_frame = env.robots[0].composite_controller.composite_controller_specific_config.get(
+            "ik_input_ref_frame", "world"
+        )
+        assert ref_frame == 'world', "Only world frame is supported for now"
+        site_name = f"gripper0_{arm}_grip_site"
+        site_name = f"gripper0_{arm}_grip_site"
+        # update next target based on current achieved pose
+        pos = env.sim.data.get_site_xpos(site_name).copy()
+        ori = env.sim.data.get_site_xmat(site_name).copy()
+
+        new_pos = pos + delta_action[0:3]
+        delta_ori = trans.quat2mat(trans.axisangle2quat(delta_action[3:6]))
+        new_ori = np.dot(delta_ori, ori)
+        new_axisangle = trans.quat2axisangle(trans.mat2quat(new_ori))
+
+        abs_action = np.concatenate([new_pos, new_axisangle])
+        abs_action = np.concatenate([abs_action, delta_action[6:]]) # gripper actions
+    else:
+        raise ValueError(f"Controller type not supported: {robot.composite_controller_config['type']}")
+
+    return abs_action
+
+
 @jit_decorator
 def nullspace_torques(mass_matrix, nullspace_matrix, initial_joint, joint_pos, joint_vel, joint_kp=10):
     """
