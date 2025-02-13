@@ -105,6 +105,7 @@ class JointPositionController(Controller):
         qpos_limits=None,
         interpolator=None,
         input_type: Literal["delta", "absolute"] = "delta",
+        disable_grav_comp=False,
         **kwargs,  # does nothing; used so no error raised when dict is passed with extra terms used previously
     ):
 
@@ -171,6 +172,9 @@ class JointPositionController(Controller):
         assert self.input_type in ["delta", "absolute"], f"Input type must be delta or absolute, got: {self.input_type}"
         if self.input_type == "absolute":
             assert self.impedance_mode == "fixed", "Absolute input type is only supported for fixed impedance mode."
+
+        # Disable gravity compensation
+        self.disable_grav_comp = disable_grav_comp
 
         # initialize
         self.goal_qpos = None
@@ -260,7 +264,9 @@ class JointPositionController(Controller):
         desired_torque = np.multiply(np.array(position_error), np.array(self.kp)) + np.multiply(vel_pos_error, self.kd)
 
         # Return desired torques plus gravity compensations
-        self.torques = np.dot(self.mass_matrix, desired_torque) + self.torque_compensation
+        self.torques = np.dot(self.mass_matrix, desired_torque)
+        if not self.disable_grav_comp:
+            self.torques += self.torque_compensation
 
         # Always run superclass call for any cleanups at the end
         super().run_controller()

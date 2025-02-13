@@ -103,6 +103,7 @@ class MujocoEnv(metaclass=EnvMeta):
         hard_reset=True,
         renderer="mjviewer",
         renderer_config=None,
+        ep_meta={},
         seed=None,
     ):
         # Rendering-specific attributes
@@ -138,7 +139,7 @@ class MujocoEnv(metaclass=EnvMeta):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
-        self._ep_meta = {}
+        self._ep_meta = ep_meta
 
         # Load the model
         self._load_model()
@@ -410,6 +411,13 @@ class MujocoEnv(metaclass=EnvMeta):
             if modality == "image-state" and not macros.CONCATENATE_IMAGES:
                 continue
             observations[modality] = np.concatenate(obs, axis=-1)
+
+        # add extra joint states to the observations for all but robot indexes
+        robot_idx = [self.robots[i]._ref_joint_pos_indexes for i in range(len(self.robots))]
+        robot_idx = [item for sublist in robot_idx for item in sublist]
+        non_robot_qpos_idx = set(range(self.sim.get_state().qpos.flatten().shape[0])) - set(robot_idx)
+        obj_joint_states = self.sim.get_state().qpos.flatten()[list(non_robot_qpos_idx)] # this also include fixture joints
+        observations["objects-joint-state"] = obj_joint_states
 
         return observations
 

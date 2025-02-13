@@ -21,6 +21,7 @@ from tqdm import tqdm
 
 import h5py
 import numpy as np
+import xml.etree.ElementTree as ET
 
 import robosuite
 from robosuite.controllers import load_composite_controller_config
@@ -36,7 +37,95 @@ from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimi
 import matplotlib
 matplotlib.use('Agg')
 
-def reset_to(env, state):
+# Function to replace robot tags in the XML
+def replace_robot_tag(new_model_xml, old_model_xml):
+    """
+    new_model_xml: str (XML content of the new model)
+    old_model_xml: str (XML content of the old model)
+
+    1. Delete all tags starting with 'robot0' in the <actuator> and <asset> tags in the new model.
+    2. Add all 'robot0' related tags from the old model into the new model in <actuator> and <asset>.
+    3. Replace 'robot0_floating_base' body tag with 'robot0_base' from the old model (including its content).
+
+    Returns:
+        str: Modified XML content as a string.
+    """
+
+    # Parse XML content
+    new_root = ET.fromstring(new_model_xml)
+    old_root = ET.fromstring(old_model_xml)
+
+    # Function to filter and transfer robot0 elements
+    def transfer_robot0_elements(new_parent, old_parent):
+        # Remove existing robot0 elements in new_parent
+        if new_parent is not None:
+            for elem in list(new_parent):
+                if "robot0" in elem.attrib.get("name", ""):
+                    new_parent.remove(elem)
+
+        if old_parent is not None:
+            if new_parent is None:
+                # add a new parent element if it doesn't exist to the
+                # Add robot0 elements from old_parent to new_parent as a child of <mujoco> tag
+                new_parent = ET.SubElement(new_root, old_parent.tag)
+            for elem in old_parent:
+                if "robot0" in elem.attrib.get("name", ""):
+                    new_parent.append(elem)
+
+    # Update <actuator> elements
+    new_actuator = new_root.find("actuator")
+    old_actuator = old_root.find("actuator")
+    transfer_robot0_elements(new_actuator, old_actuator)
+
+    # Update <asset> elements
+    new_asset = new_root.find("asset")
+    old_asset = old_root.find("asset")
+    transfer_robot0_elements(new_asset, old_asset)
+
+    new_contact = new_root.find("contact")
+    old_contact = old_root.find("contact")
+    transfer_robot0_elements(new_contact, old_contact)
+
+    new_robot0_base = None
+    for body in new_root.findall(".//body"):
+        if body.attrib.get("name") == "robot0_floating_base":
+            new_robot0_base = body
+            break
+
+    # Locate "robot0_floating_base" in old model
+    old_robot0_floating_base = None
+    for body in old_root.findall(".//body"):
+        if body.attrib.get("name") == "robot0_base":
+            old_robot0_floating_base = body
+            break
+
+    assert new_robot0_base is not None, "robot0_floating_base must exist in new model"
+    assert old_robot0_floating_base is not None, "robot0_base must exist in old model"
+    # Replace the contents of "robot0_base" with "robot0_floating_base" if both exist
+    if new_robot0_base is not None and old_robot0_floating_base is not None:
+        # Clear the current children of new_robot0_base
+        new_robot0_base.clear()
+
+        # Copy all attributes from old_robot0_floating_base to new_robot0_base
+        new_robot0_base.attrib = old_robot0_floating_base.attrib
+
+        # Copy all child elements
+        for elem in old_robot0_floating_base:
+            new_robot0_base.append(elem)
+
+    # copy the geom name from old model to new model named robot0_floor in the worldbody tag
+    # we want to put it in the same location in the new model
+    new_worldbody = new_root.find("worldbody")
+    old_worldbody = old_root.find("worldbody")
+    for geom in old_worldbody.findall(".//geom"):
+        if geom.attrib.get("name") == "robot0_floor":
+            index = list(old_worldbody).index(geom)
+            new_worldbody.insert(index, geom)
+
+    # Convert back to string
+    return ET.tostring(new_root, encoding="unicode")
+
+def reset_to(env, state, replace_robot_joints=True, change_to_gr1=False):
     """
     Reset to a specific simulator state.
 
@@ -64,8 +153,14 @@ def reset_to(env, state):
         # while the call to env.reset_from_xml_string does call reset,
         # that is only a "soft" reset that doesn't actually reload the model.
         env.reset()
-        '''
         robosuite_version_id = int(robosuite.__version__.split(".")[1])
+        # we need to first update state["model"] to replace the robot tag with the current robot
+        curr_xml = env.sim.model.get_xml()
+        # if state["model"] != curr_xml:
+
+
+        # state["model"] = xml
+
         if robosuite_version_id <= 3:
             from robosuite.utils.mjcf_utils import postprocess_model_xml
 
@@ -74,47 +169,48 @@ def reset_to(env, state):
             # v1.4 and above use the class-based edit_model_xml function
             xml = env.edit_model_xml(state["model"])
 
+        # with open("new_model.xml", "w") as f:
+        #     f.write(xml)
+        if change_to_gr1:
+            xml = replace_robot_tag(new_model_xml=xml, old_model_xml=curr_xml)
+        # # save the current model xml
+        # with open("current_model.xml", "w") as f:
+        #     f.write(curr_xml)
+        # with open("updated_model.xml", "w") as f:
+        #     f.write(xml)
+
         env.reset_from_xml_string(xml)
+        # env.sim.reset(): resets the robot back to some position which has collision with the table. Change the xml?
         env.sim.reset()
-        '''
+        env.robots[0].reset()
+        env.sim.forward()
         # hide teleop visualization after restoring from model
         # env.sim.model.site_rgba[env.eef_site_id] = np.array([0., 0., 0., 0.])
         # env.sim.model.site_rgba[env.eef_cylinder_id] = np.array([0., 0., 0., 0.])
     if "states" in state:
-        # get the robot state index from the flattened state
-        robot_indices = env.robots[0]._ref_joint_pos_indexes
-        other_indices = set(range(env.sim.get_state().qpos.flatten().shape[0])) - set(robot_indices)
-        other_indices = sorted(list(other_indices))
+        if replace_robot_joints:
+            print("Replacing robot joints")
+            robot_indices = env.robots[0]._ref_joint_pos_indexes
+            other_indices = set(range(env.sim.get_state().qpos.flatten().shape[0])) - set(robot_indices)
+            other_indices = sorted(list(other_indices))
 
-        non_robot_qpos_idx = state["non_robot_qpos_idx"]
-        # if len(non_robot_qpos_idx) != len(other_indices):
-
-        # zero_action = np.zeros(env.action_dim)
-        # # controller has absolute actions, so we need to set the initial action to be the current position
-        # active_robot = env.robots[0]
-        # arm = "right"
-        # if active_robot.part_controllers[arm].input_type == "absolute":
-        #     zero_action = convert_delta_to_abs_action(zero_action, active_robot, arm, env)
-
-        if len(non_robot_qpos_idx) > len(other_indices):
-            # keep the last len(other_indices) elements since some robot indices might have been removed
-            non_robot_qpos_idx = non_robot_qpos_idx[-len(other_indices):]
-        if len(non_robot_qpos_idx) < len(other_indices):
-            # keep the last len(non_robot_qpos_idx) elements since some robot indices might have been removed
-            other_indices = other_indices[-len(non_robot_qpos_idx):]
-        assert len(non_robot_qpos_idx) == len(other_indices), f"Mismatch in non_robot_qpos_idx: {len(non_robot_qpos_idx)} != {len(other_indices)}"
-        qpos_state = state["qpos_state"]
-
-        time = env.sim.data.time
-        qvel = env.sim.get_state().qvel.flatten().copy()
-        qpos = env.sim.get_state().qpos.flatten().copy()
-        # copy over everything except the robot state
-        for curr_idx, state_idx in zip(other_indices, non_robot_qpos_idx):
-            qpos[curr_idx] = qpos_state[state_idx]
-        curr_state = MjSimState(qpos=qpos, qvel=qvel, time=time)
-        env.sim.set_state_from_flattened(curr_state.flatten())
-        env.sim.forward()
-        should_ret = True
+            non_robot_qpos_idx = state["non_robot_qpos_idx"]
+            assert len(non_robot_qpos_idx) == len(other_indices), f"Mismatch in non_robot_qpos_idx: {len(non_robot_qpos_idx)} != {len(other_indices)}"
+            qpos_state = state["qpos_state"]
+            time = env.sim.data.time
+            qvel = env.sim.get_state().qvel.flatten().copy()
+            qpos = env.sim.get_state().qpos.flatten().copy()
+            # copy over everything except the robot state
+            for curr_idx, state_idx in zip(other_indices, non_robot_qpos_idx):
+                qpos[curr_idx] = qpos_state[state_idx]
+            curr_state = MjSimState(qpos=qpos, qvel=qvel, time=time)
+            env.sim.set_state_from_flattened(curr_state.flatten())
+            env.sim.forward()
+            should_ret = True
+        else:
+            env.sim.set_state_from_flattened(state["states"])
+            env.sim.forward()
+            should_ret = True
 
     # update state as needed
     if hasattr(env, "update_sites"):
@@ -155,6 +251,7 @@ if __name__ == "__main__":
         help="Choice of controller. Can be, eg. 'NONE' or 'WHOLE_BODY_IK', etc. Or path to controller json file",
     )
     parser.add_argument('--render', action='store_true')
+    parser.add_argument('--replace-robot-joints', action='store_true')
     args = parser.parse_args()
 
     demo_path = args.folder
@@ -163,15 +260,25 @@ if __name__ == "__main__":
     f = h5py.File(hdf5_path, "r")
     env_name = f["data"].attrs["env"]
     env_info = json.loads(f["data"].attrs["env_info"])
+    if env_info["robots"] != args.robot:
+        print(f"Overwriting robot model: {env_info['robots']} -> {args.robot}")
+        args.replace_robot_joints = True
+        args.change_to_gr1 = True
+    print(f"[debug] replace_robot_joints: {args.replace_robot_joints}")
     if args.robot is not None:
         env_info["robots"] = [args.robot]
     print(env_info)
+    orig_controller_input_type = env_info["controller_configs"]["body_parts"]["right"]["input_type"]
+
+    control_type = "absolute"
+    if any(['GR1' in robot for robot in env_info["robots"]]):
+        args.controller = "WHOLE_BODY_MINK_IK"
 
     controller_config = load_composite_controller_config(
         controller=args.controller,
         robot=env_info["robots"][0],
     )
-    control_type = "absolute"
+
     # controller_config['body_parts']['right']['input'] = "OSC_POSE"
     controller_config['body_parts']['right']['input_type'] = control_type
     controller_config['body_parts']['right']['input_ref_frame'] = "world"
@@ -182,8 +289,10 @@ if __name__ == "__main__":
     controller_config['body_parts']['right']['kp_limits'] = [0, 10000]
     '''
     env_info["controller_configs"] = controller_config
+    # env_info["seed"] = 349409
     print(env_info)
 
+    print("Creating environment...")
     env = robosuite.make(
         **env_info,
         has_renderer=args.render,
@@ -194,6 +303,7 @@ if __name__ == "__main__":
         # control_freq=30,
         renderer="mjviewer",
     )
+    print(env)
 
     # list of all demonstrations episodes
     demos = list(f["data"].keys())
@@ -230,7 +340,7 @@ if __name__ == "__main__":
         # ep_meta = json.loads(f["data/{}".format(ep)].attrs.get("ep_meta"))
         # env.set_ep_meta(ep_meta)
         # env.reset()
-        reset_to(env, initial_state)
+        reset_to(env, initial_state, replace_robot_joints=args.replace_robot_joints, change_to_gr1=args.change_to_gr1)
 
         zero_action = np.zeros(env.action_dim)
         # controller has absolute actions, so we need to set the initial action to be the current position
@@ -239,7 +349,6 @@ if __name__ == "__main__":
         if active_robot.part_controllers[arm].input_type == "absolute":
             zero_action = convert_delta_to_abs_action(zero_action, active_robot, arm, env)
         env.step(zero_action)
-        # import ipdb; ipdb.set_trace()
 
         '''
         env.reset()
@@ -298,7 +407,7 @@ if __name__ == "__main__":
             # env.sim.forward()
             # print(env._get_observations()['cube_pos']-gt_obs['cube_pos'][0])
             # cube_pos_err.append(np.linalg.norm(env._get_observations()['cube_pos']-gt_obs['cube_pos'][0]))
-            # cube_quat_err.append(
+            # cube_quae_err.append(
             #     np.linalg.norm(
             #         T.quat2axisangle(env._get_observations()['cube_quat'])-T.quat2axisangle(gt_obs['cube_quat'][0])
             #     )
@@ -310,47 +419,17 @@ if __name__ == "__main__":
 
             obs = env._get_observations()
             for j, action in enumerate(actions):
-                # import ipdb; ipdb.set_trace()
-                eef_pos = obs['robot0_eef_pos']
-                eef_quat = obs['robot0_eef_quat']
-                delta_pos = action[:3] - eef_pos
-
-                eef_mat = T.quat2mat(eef_quat)
-                action_mat = T.quat2mat(T.axisangle2quat(action[3:6]))
-                delta_mat = action_mat @ eef_mat.T
-                delta_quat = T.mat2quat(delta_mat)
-                if np.dot(delta_quat, eef_quat) < 0:
-                    delta_quat = -delta_quat
-
-                if control_type == "delta":
-                    action = np.concatenate([delta_pos, T.quat2axisangle(delta_quat), action[6:]])
+                # eef_pos = obs['robot0_eef_pos']
+                # eef_quat = obs['robot0_eef_quat']
+                # delta_pos = action[:3] - eef_pos
 
                 _action = None
-                if args.robot is not None:
-                    if len(action) == 7:
-                        action_dict = {
-                            'right': action[:6],
-                            'right_gripper': action[6:7],
-                            'left': np.zeros(6),
-                            'left_gripper': np.zeros(1),
-                            'base_mode': -1,
-                            'base': np.zeros(3),
-                        }
-                    elif len(action) == 14:
-                        action_dict = {
-                            'right': action[:6],
-                            'right_gripper': action[12:13],
-                            'left': np.zeros(6),
-                            'left_gripper': np.zeros(1),
-                            'base_mode': -1,
-                            'base': np.zeros(3),
-                        }
-                    else:
-                        raise ValueError(f"Invalid action length: {len(action)}")
-                    _action = env.robots[0].create_action_vector(action_dict)
-                    # assert np.allclose(_action, action), f"Action mismatch: {_action} != {action}"
-                else:
-                    _action = action
+                if orig_controller_input_type != control_type:
+                    assert orig_controller_input_type == "delta", f"Invalid controller input type: {orig_controller_input_type}"
+                    delta_arm_action = action.copy()
+                    delta_arm_action[:6] = env.robots[0].part_controllers[arm].scale_action(delta_arm_action[:6])
+                    action = convert_delta_to_abs_action(delta_arm_action, env.robots[0], arm, env)
+                _action = action
                 obs, _, _, _ = env.step(_action)
                 # cube_pos_err.append(np.linalg.norm(obs['cube_pos']-gt_obs['cube_pos'][j]))
                 # cube_quat_err.append(np.linalg.norm(T.quat2axisangle(obs['cube_quat'])-T.quat2axisangle(gt_obs['cube_quat'][j])))
