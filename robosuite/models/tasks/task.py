@@ -4,6 +4,8 @@ import re
 
 import mujoco
 
+import mujoco
+
 from robosuite.models.objects import MujocoObject
 from robosuite.models.robots import RobotModel
 from robosuite.models.world import MujocoWorldBase
@@ -21,6 +23,33 @@ def get_subtree_geom_ids_by_group(model: mujoco.MjModel, body_id: int, group: in
         group: Group ID to filter geoms.
     Returns:
         A list containing all subtree geom ids in the specified group.
+    Adapted from https://github.com/kevinzakka/mink/blob/main/mink/utils.py
+    """
+
+    def gather_geoms(body_id: int) -> list[int]:
+        geoms: list[int] = []
+        geom_start = model.body_geomadr[body_id]
+        geom_end = geom_start + model.body_geomnum[body_id]
+        geoms.extend(geom_id for geom_id in range(geom_start, geom_end) if model.geom_group[geom_id] == group)
+        children = [i for i in range(model.nbody) if model.body_parentid[i] == body_id]
+        for child_id in children:
+            geoms.extend(gather_geoms(child_id))
+        return geoms
+
+    return gather_geoms(body_id)
+
+
+def get_subtree_geom_ids_by_group(model: mujoco.MjModel, body_id: int, group: int) -> list[int]:
+    """Get all geoms belonging to a subtree starting at a given body, filtered by group.
+
+    Args:
+        model: MuJoCo model.
+        body_id: ID of body where subtree starts.
+        group: Group ID to filter geoms.
+
+    Returns:
+        A list containing all subtree geom ids in the specified group.
+
     Adapted from https://github.com/kevinzakka/mink/blob/main/mink/utils.py
     """
 
@@ -178,6 +207,7 @@ class Task(MujocoWorldBase):
                     get_ids(sim=sim, elements=model.visual_geoms + model.contact_geoms, element_type="geom"),
                     get_ids(sim=sim, elements=model.sites, element_type="site"),
                 ]
+<<<<<<< HEAD
                 if model not in robot_models:
                     body_id = sim.model.body_name2id(model.root_body)
                     extended_geom_ids = get_subtree_geom_ids_by_group(sim.model, body_id, 1)
@@ -185,6 +215,8 @@ class Task(MujocoWorldBase):
                     for geom_id in extended_geom_ids:
                         if geom_id not in id_groups[0]:
                             id_groups[0].append(geom_id)
+=======
+>>>>>>> 2f660c10 (Enable instance segmentation to include bodies in arena)
             group_types = ("geom", "site")
             ids_to_instances = (self._geom_ids_to_instances, self._site_ids_to_instances)
             ids_to_classes = (self._geom_ids_to_classes, self._site_ids_to_classes)
