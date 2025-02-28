@@ -135,7 +135,7 @@ class GR1FloatingBody(GR1):
 
         # fix lower body
         self._remove_joint_actuation("leg")
-        self._remove_free_joint()
+
 
     @property
     def init_qpos(self):

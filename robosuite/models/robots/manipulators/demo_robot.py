@@ -7,8 +7,8 @@ class Demo(ManipulatorModel):
 
     arms = ["right"]
 
-    def __init__(self, idn=0):
-        super().__init__(xml_path_completion("robots/demo/robot.xml"), idn=idn)
+    def __init__(self, _path="robots/demo/robot.xml", idn=0):
+        super().__init__(xml_path_completion(_path), idn=idn)
 
     # -------------------------------------------------------------------------------------- #
     # -------------------------- Private Properties ---------------------------------------- #
@@ -62,7 +62,6 @@ class Demo(ManipulatorModel):
             str: Default gripper name to add to this robot
         """
         return {"right": "InspireRightHand"}
-
     @property
     def arm_type(self):
         """
@@ -125,13 +124,10 @@ class DemoTwoFingered(Demo):
         """
         Since this is bimanual robot, returns dict with `'right'`, `'left'` keywords corresponding to their respective
         values
-
         Returns:
             dict: Dictionary containing arm-specific gripper names
         """
-        return {"right": "PandaGripper", "left": "PandaGripper"}
-        # return {"right": "FourierRightHand", "left": "FourierLeftHand"}
-
+        return {"right": "PandaGripper", "left": "PandaGripper"} # return {"right": "FourierRightHand", "left": "FourierLeftHand"}
     @property
     def gripper_mount_quat_offset(self):
         if self.default_gripper.get("right") == "FourierRightHand":
@@ -160,3 +156,49 @@ class DemoSingleHand(Demo):
     @property
     def gripper_mount_quat_offset(self):
         return {"right": [0.0, 0.0, 0.0, 1.0], "left": [0.0, 0.0, 1.0, 0.0]}
+
+class DemoTwoHand(Demo):
+    arms = ["left", "right"]
+    def __init__(self, idn=0):
+        super().__init__("robots/demo/robot_dual.xml", idn=idn)
+
+    @property
+    def _eef_name(self):
+        """
+        Since this is bimanual robot, returns dict with `'right'`, `'left'` keywords corresponding to their respective
+        values
+
+        Returns:
+            dict: Dictionary containing arm-specific eef names
+        """
+        # return {"right-eef": "right_gripper_mount",
+        #         "right-tool": "right_tool_mount",
+        #         "left-eef": "left_gripper_mount",
+        #         "left-tool": "left_tool_mount"}
+        return {
+            "right": "right_gripper_mount", # merge name
+            "left": "left_gripper_mount",
+        }
+
+    @property
+    def default_gripper(self):
+        return {"right": "FourierRightHand", "left": "FourierLeftHand"}
+
+    @property
+    def gripper_mount_quat_offset(self):
+        return {"right": [0.0, 0.0, 0.0, 1.0], "left": [0.0, 0.0, 0.0, 1.0]}
+
+    @property
+    def arm_type(self):
+        return "bimanual"
+
+    @property
+    def init_qpos(self):
+        # Copied from panda.py
+        right_arm_init = np.array([0.0]*12)
+        return right_arm_init
+
+    @property
+    def default_controller_config(self):
+        # Copied from panda.py
+        return {"right": "default_gr1_fixed_lower_body", "left": "default_gr1_fixed_lower_body"}

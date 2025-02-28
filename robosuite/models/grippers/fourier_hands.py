@@ -24,12 +24,12 @@ class FourierLeftHand(GripperModel):
         # 0 is thumb rot, no copying. Thumb bend has 3 joints, so copy 3 times. Other fingers has 2 joints, so copy 2 times.
         assert len(action) == self.dof
         action = np.array(action)
-        indices = np.array([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5])
+        indices = np.array([0])
         return action[indices]
 
     @property
     def init_qpos(self):
-        return np.array([0.0] * 11)
+        return np.array([1.83157812, 0.0029788, 0.00743951, 0.14403124, 0.04400525, 0.15292447, 0.05207598, 0.14401271, 0.04400369, 0.13652065, 0.03757485])
 
     @property
     def speed(self):
@@ -37,7 +37,7 @@ class FourierLeftHand(GripperModel):
 
     @property
     def dof(self):
-        return 6
+        return 1
 
     @property
     def _important_geoms(self):

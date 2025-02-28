@@ -7,7 +7,6 @@ from scipy.spatial.transform import Rotation as R
 
 from robosuite.devices import Device
 from robosuite.utils.transform_utils import rotation_matrix
-from robosuite.devices.oculus_base import TeleopAction, TeleopObservation, run_threaded_command
 
 from copy import deepcopy
 import robosuite as suite
@@ -27,16 +26,16 @@ if __name__ == "__main__":
     controller_config['body_parts']['right']['input_ref_frame'] = "world"
 
 
-    # controller_config['body_parts']['right']['input_type'] = "absolute"
-    # controller_config['body_parts']['left']['input_type'] = "absolute"
-    assert controller_config['body_parts']['right']['input_type'] == "delta"
-    assert controller_config['body_parts']['left']['input_type'] == "delta"
+    controller_config['body_parts']['right']['input_type'] = "absolute"
+    controller_config['body_parts']['left']['input_type'] = "absolute"
+    # assert controller_config['body_parts']['right']['input_type'] == "delta"
+    # assert controller_config['body_parts']['left']['input_type'] == "delta"
     print(controller_config)
     # dump the confil in temp.yaml
     # with open("temp.yaml", "w") as f:
     #     f.write(str(controller_config))
     # read temp.yaml and compare the content with controller_config
-    dumped_config = yaml.load(open("temp.yaml", "r"), Loader=yaml.FullLoader)
+    # dumped_config = yaml.load(open("temp.yaml", "r"), Loader=yaml.FullLoader)
     # make a recursive comparison
     def compare_dict(d1, d2):
         for k in d1:
@@ -106,7 +105,7 @@ if __name__ == "__main__":
         action_dict = deepcopy(input_ac_dict)  # {}
         # set arm actions
         for arm, controller_input_type in controller_inputs_types_dict.items():
-            print(controller_input_type, arm)
+            # print(controller_input_type, arm)
             if controller_input_type == "delta":
                 action_dict[arm] = input_ac_dict[f"{arm}_delta"]
             elif controller_input_type == "absolute":
@@ -120,9 +119,10 @@ if __name__ == "__main__":
         env_action = np.concatenate(env_action)
         for gripper_ac in all_prev_gripper_actions[device.active_robot]:
             all_prev_gripper_actions[device.active_robot][gripper_ac] = action_dict[gripper_ac]
+        # print(env_action)
 
         env.step(env_action)
         env.render()
         # print(env_action)
-        time.sleep(1/fq)
+        # time.sleep(1/fq)
     device.stop()

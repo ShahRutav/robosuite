@@ -6,28 +6,36 @@ from robosuite.utils.numba import jit_decorator
 
 
 def convert_delta_to_abs_action(delta_action, robot, arm, env=None):
+    assert delta_action.shape[0] == 7, f"Delta action should be of shape (7,) but is {delta_action.shape}"
     # check if the class has an attribute function to convert delta to absolute action
     if hasattr(robot.part_controllers[arm], "delta_to_abs_action"):
         abs_action = robot.part_controllers[arm].delta_to_abs_action(delta_action[:-1], goal_update_mode="achieved")
         abs_action = np.concatenate([abs_action, delta_action[6:]])
     elif robot.composite_controller_config["type"] in ["WHOLE_BODY_IK", "WHOLE_BODY_MINK_IK"]:
         ref_frame = env.robots[0].composite_controller.composite_controller_specific_config.get(
-            "ik_input_ref_frame", "world"
+            "ik_input_ref_frame"
         )
-        assert ref_frame == 'world', "Only world frame is supported for now"
-        site_name = f"gripper0_{arm}_grip_site"
-        site_name = f"gripper0_{arm}_grip_site"
-        # update next target based on current achieved pose
-        pos = env.sim.data.get_site_xpos(site_name).copy()
-        ori = env.sim.data.get_site_xmat(site_name).copy()
+        if (ref_frame == 'world') or (ref_frame == 'base'):
+            site_name = f"gripper0_{arm}_grip_site"
+            site_name = f"gripper0_{arm}_grip_site"
+            # update next target based on current achieved pose
+            pos = env.sim.data.get_site_xpos(site_name).copy()
+            ori = env.sim.data.get_site_xmat(site_name).copy()
 
-        new_pos = pos + delta_action[0:3]
-        delta_ori = trans.quat2mat(trans.axisangle2quat(delta_action[3:6]))
-        new_ori = np.dot(delta_ori, ori)
-        new_axisangle = trans.quat2axisangle(trans.mat2quat(new_ori))
+            new_pos = pos + delta_action[0:3]
+            delta_ori = trans.quat2mat(trans.axisangle2quat(delta_action[3:6]))
+            new_ori = np.dot(delta_ori, ori)
+            new_axisangle = trans.quat2axisangle(trans.mat2quat(new_ori))
 
-        abs_action = np.concatenate([new_pos, new_axisangle])
-        abs_action = np.concatenate([abs_action, delta_action[6:]]) # gripper actions
+            abs_action = np.concatenate([new_pos, new_axisangle])
+            abs_action = np.concatenate([abs_action, delta_action[6:]]) # gripper actions
+            if ref_frame == 'base':
+                action_mat = trans.make_pose(abs_action[:3], trans.quat2mat(trans.axisangle2quat(abs_action[3:6])))
+                abs_action =  env.robots[0].composite_controller.joint_action_policy.transform_pose(action_mat, 'world', 'base')
+                abs_action = np.concatenate([abs_action[:3, 3], trans.quat2axisangle(trans.mat2quat(abs_action[:3,:3]))], axis=0)
+                abs_action = np.concatenate([abs_action, delta_action[6:]])
+        else:
+            raise ValueError(f"Invalid ref_frame {ref_frame}")
     else:
         raise ValueError(f"Controller type not supported: {robot.composite_controller_config['type']}")
 

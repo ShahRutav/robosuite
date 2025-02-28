@@ -35,6 +35,7 @@ ROBOT_CLASS_MAPPING = {
     "Demo": FixedBaseRobot,
     "DemoTwoFingered": FixedBaseRobot,
     "DemoSingleHand": FixedBaseRobot,
+    "DemoTwoHand": FixedBaseRobot,
 }
 
 target_type_mapping = {

@@ -74,7 +74,7 @@
           <site name="ee_y" pos="0 0.1 0" size="0.005 .1" quat="0.707105 0.707108 0 0" rgba="0 1 0 0" type="cylinder" group="1"/>
           <site name="ee_z" pos="0 0 0.1" size="0.005 .1" quat="1 0 0 0" rgba="0 0 1 0" type="cylinder" group="1"/>
           <!-- This site was added for visualization. -->
-          <site name="grip_site_cylinder" pos="0 0 0" quat="-0.5 -0.5 -0.5 0.5" size="0.005 0.5" rgba="0 1 0 0.3" type="cylinder" group="1"/>
+          <site name="grip_site_cylinder" pos="0 0 0" quat="-0.27060 -0.65328 -0.27060 0.65328" size="0.005 0.5" rgba="0 1 0 0.3" type="cylinder" group="1"/>
       </body>
 
       <!-- Palm  -->
@@ -85,7 +85,7 @@
         <!-- Thumb -->
         <body name="l_thumb" pos="0. 0. 0.">
           <body name="L_thumb_proximal_base_link" pos="0.022 -0.015498 -0.025093" quat="1 0 -6.105e-06 0">
-            <joint name="L_thumb_proximal_yaw_joint" pos="0 0 0" axis="0 0 -1" range="0 1.74" actuatorfrcrange="-10 10" damping="1"/>
+            <joint name="L_thumb_proximal_yaw_joint" pos="0 0 0" axis="0 0 -1" range="2.0 2.01" actuatorfrcrange="-10 10" damping="1"/>
             <geom name="L_thumb_proximal_base_link_vis" type="mesh" material="l_thumb_material" mesh="L_thumb_proximal_base_link_vis" group="1" contype="0" conaffinity="0"/>
             <geom name="L_thumb_proximal_base_link_col" type="mesh" mass="0.1" mesh="L_thumb_proximal_base_link_col"/>
             <body name="L_thumb_proximal_link" pos="0.02175 0 0" quat="0.707141 -0.707073 0 0">
@@ -178,15 +178,19 @@
   <actuator>
     <position joint="L_pinky_intermediate_joint" name="L_pinky_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="L_pinky_proximal_joint" name="L_pinky_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="L_ring_intermediate_joint" name="L_ring_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="L_ring_intermediate_joint" name="L_ring_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="L_ring_intermediate_joint" name="L_ring_intermediate_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="L_ring_proximal_joint" name="L_ring_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="L_middle_intermediate_joint" name="L_middle_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="L_middle_intermediate_joint" name="L_middle_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="L_middle_intermediate_joint" name="L_middle_intermediate_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="L_middle_proximal_joint" name="L_middle_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="L_index_intermediate_joint" name="L_index_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="L_index_intermediate_joint" name="L_index_intermediate_joint_drive" ctrlrange="0 1.74" kp="2" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="L_index_intermediate_joint" name="L_index_intermediate_joint_drive" ctrlrange="0 0.01" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="L_index_proximal_joint" name="L_index_proximal_joint_drive" ctrlrange="0 1.57" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="L_thumb_distal_joint" name="L_thumb_distal_joint_drive" ctrlrange="0 1.23" kp="2" forcelimited="true" forcerange="-20 20"/>
     <position joint="L_thumb_proximal_pitch_joint" name="L_thumb_proximal_pitch_joint_drive" ctrlrange="0 1.22" kp="2" forcelimited="true" forcerange="-20 20"/>
-    <position joint="L_thumb_proximal_yaw_joint" name="L_thumb_proximal_yaw_joint_drive" ctrlrange="0 1.74"  kp="4" forcelimited="true" forcerange="-20 20"/>
+    <!-- <position joint="L_thumb_proximal_yaw_joint" name="L_thumb_proximal_yaw_joint_drive" ctrlrange="0 1.74"  kp="4" forcelimited="true" forcerange="-20 20"/> -->
+    <position joint="L_thumb_proximal_yaw_joint" name="L_thumb_proximal_yaw_joint_drive" ctrlrange="0 0.01"  kp="4" forcelimited="true" forcerange="-20 20"/>
   </actuator>
 
   <sensor>

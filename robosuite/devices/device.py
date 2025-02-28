@@ -14,13 +14,14 @@ class Device(metaclass=abc.ABCMeta):
     Also contains shared logic for managing multiple and/or multiarmed robots.
     """
 
-    def __init__(self, env):
+    def __init__(self, env, arm_index=0):
         """
         Args:
             env (RobotEnv): The environment which contains the robot(s) to control
                             using this device.
         """
         self.env = env
+        self.arm_index = arm_index
         self.all_robot_arms = [robot.arms for robot in self.env.robots]
         self.num_robots = len(self.all_robot_arms)
 
@@ -29,7 +30,7 @@ class Device(metaclass=abc.ABCMeta):
         Resets internal state related to robot control
         """
         self.grasp_states = [[False] * len(self.all_robot_arms[i]) for i in range(self.num_robots)]
-        self.active_arm_indices = [0] * len(self.all_robot_arms)
+        self.active_arm_indices = [self.arm_index] * len(self.all_robot_arms)
         self.active_robot = 0
         self.base_modes = [False] * len(self.all_robot_arms)
 

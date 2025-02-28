@@ -1,12 +1,12 @@
 import os
 import time
 import numpy as np
+import threading
 from scipy.spatial.transform import Rotation as R
 
 from robosuite.devices import Device
 import robosuite.utils.transform_utils as T
 from robosuite.utils.transform_utils import rotation_matrix
-from robosuite.devices.oculus_base import TeleopAction, TeleopObservation, run_threaded_command
 from robosuite.controllers.parts.arm.osc import OperationalSpaceController
 
 canonical_quat = True
@@ -27,6 +27,11 @@ def vec_to_reorder_mat(vec):
         X[i, ind] = np.sign(vec[i])
     return X
 
+def run_threaded_command(command, args=(), daemon=True):
+    thread = threading.Thread(target=command, args=args, daemon=daemon)
+    thread.start()
+    return thread
+
 #### code adapted from https://github.com/AlexanderKhazatsky/R2D2/blob/main/r2d2/controllers/oculus_controller.py ####
 class Oculus(Device):
     def __init__(
@@ -36,9 +41,8 @@ class Oculus(Device):
         max_rot_vel: float = 1,
         max_gripper_vel: float = 1,
         spatial_coeff: float = 1,
-        pos_action_gain: float = 5,
-        rot_action_gain: float = 2,
-        gripper_action_gain: float = 3,
+        pos_sensitivity: float = 2.0, # 5
+        rot_sensitivity: float = 1.0, # 2
         rmat_reorder: list = [-2, -1, -3, 4],
         *args,
         **kwargs
@@ -59,25 +63,40 @@ class Oculus(Device):
         self.max_rot_vel = max_rot_vel
         self.max_gripper_vel = max_gripper_vel
         self.spatial_coeff = spatial_coeff
-        self.pos_action_gain = pos_action_gain
-        self.rot_action_gain = rot_action_gain
-        self.gripper_action_gain = gripper_action_gain
+        assert pos_sensitivity >= 2.0, "Pose sensitivity must be at least 2.0 for oculus"
+        self._reset_state = 0
+        self._enabled = False
+
+        self.pos_action_gain = pos_sensitivity
+        self.rot_action_gain = rot_sensitivity
         self.global_to_env_mat = vec_to_reorder_mat(rmat_reorder)
         self.reset_orientation = {'right': True, 'left': True}
         self.target_gripper = {'right': 0, 'left': 0}
-        self.reset_state()
+        self._reset_internal_state()
 
 
     def start_control(self) -> None:
         print("Starting Oculus Interface...")
         self.oculus_reader.run()
+        self._reset_internal_state()
+        self._reset_state = 0
+        self._enabled = True
         run_threaded_command(self._update_internal_state)
 
     def stop(self) -> None:
         print("Stopping Oculus Interface...")
         self.oculus_reader.stop()
 
-    def reset_state(self) -> None:
+    # set on exit
+    def __del__(self):
+        # It’s a good idea to wrap cleanup in a try/except
+        try:
+            self.stop()
+        except Exception as e:
+            # Optionally log the exception
+            print(f"Exception during cleanup: {e}")
+
+    def _reset_internal_state(self) -> None:
         super()._reset_internal_state()
         self._state = {
             'right': {
@@ -113,13 +132,14 @@ class Oculus(Device):
             time_since_read = time.time() - last_read_time
             poses, buttons = self.oculus_reader.get_transformations_and_buttons()
             if poses == {}:
-                # print('skip')
                 continue
 
             # Determine Control Pipeline #
             for arm in ['left', 'right']:
                 button_G = 'RG' if arm=='right' else 'LG'
                 button_J = 'RJ' if arm=='right' else 'LJ'
+
+                button_reset = 'B'
                 controller_id = 'r' if arm=='right' else 'l'
 
                 if controller_id not in poses:
@@ -158,6 +178,11 @@ class Oculus(Device):
                         self.reset_orientation[arm] = True
                     self.vr_to_global_mat[arm] = rot_mat
 
+                if buttons[button_reset]:
+                    self._reset_state = 1
+                    self._enabled = False
+                    self._reset_internal_state()
+
     def _process_reading(self, arm):
         rot_mat = np.asarray(self._state[arm]["poses"])
         rot_mat = self.global_to_env_mat @ self.vr_to_global_mat[arm] @ rot_mat
@@ -193,16 +218,17 @@ class Oculus(Device):
         robot_quat = T.mat2quat(robot_quat)
         if isinstance(self.env.robots[robot_id].part_controllers[arm], OperationalSpaceController):
             ref_frame = self.env.robots[robot_id].part_controllers[arm].input_ref_frame
-            assert ref_frame == "world", "Only world ref frame is supported for now"
-            # if ref_frame == "world":
-            #     pass
-            # elif ref_frame == "base":
-            #     pose_in_world = T.pose2mat((robot_pos, robot_quat))
-            #     pose_in_base = transform_pose(
-            #         src_frame_pose=pose_in_world,
-            #         src_frame="world",
-            #         dst_frame="base",
-            #     )
+            if ref_frame == "world":
+                pass
+            elif ref_frame == "base":
+                base_pos, base_ori = self.env.robots[robot_id].composite_controller.get_controller_base_pose(arm)
+                base_mat = T.make_pose(base_pos, base_ori)
+                pose_in_world = T.pose2mat((robot_pos, robot_quat))
+                pose_in_base = np.linalg.inv(base_mat) @ pose_in_world
+                robot_pos = pose_in_base[:3, 3]
+                robot_quat = T.mat2quat(pose_in_base[:3, :3])
+            else:
+                raise NotImplementedError(f"Only world and base reference frames are supported. Current reference frame is {ref_frame}")
         else:
             raise NotImplementedError(f"Only OperationalSpaceController is supported for now. Current controller is {type(self.env.robots[robot_id].part_controllers[arm])}")
         return robot_pos, robot_quat
@@ -210,13 +236,13 @@ class Oculus(Device):
     def get_controller_state(self) -> dict:
         buttons = self._state["buttons"]
         arm = self.active_arm
-        if self._state[arm]["poses"] is None:
+        if (self._state[arm]["poses"] is None) or (self._state[arm]["movement_enabled"] is False):
             return dict(
                 dpos=np.zeros(3),
                 rotation=self.rotation,
                 raw_drotation=np.zeros(3),
                 grasp=self.target_gripper[arm],
-                reset=False,
+                reset=self._reset_state,
                 base_mode=int(self.base_mode),
             )
 
@@ -270,12 +296,13 @@ class Oculus(Device):
         # self.rotation = np.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]])
         # roll, pitch, yaw = np.zeros(3)
         # dpos = np.zeros(3)
+        dpos = dpos * self.pos_action_gain
         return dict(
             dpos=dpos,
             rotation=self.rotation,
-            raw_drotation=np.array([pitch, roll, yaw]),
+            raw_drotation=np.array([pitch, roll, yaw])*self.rot_action_gain,
             grasp=self.target_gripper[arm],
-            reset=False,
+            reset=self._reset_state,
             base_mode=int(self.base_mode),
         )
 
