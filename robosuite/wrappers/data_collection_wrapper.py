@@ -177,7 +177,7 @@ class DataCollectionWrapper(Wrapper):
 
         return ret
 
-    def step(self, action):
+    def step(self, action, action_dict=None):
         """
         Extends vanilla step() function call to accommodate data collection
 
@@ -213,6 +213,9 @@ class DataCollectionWrapper(Wrapper):
             step_info = ret[3]
             if "action_abs" in step_info.keys():
                 info["actions_abs"] = np.array(step_info["action_abs"])
+            if action_dict is not None:
+                for key, value in action_dict.items():
+                    info[key] = value
 
             self.action_infos.append(info)
 
