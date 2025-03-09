@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from copy import deepcopy
+import re
 
 import mujoco
 
@@ -7,6 +8,10 @@ from robosuite.models.objects import MujocoObject
 from robosuite.models.robots import RobotModel
 from robosuite.models.world import MujocoWorldBase
 from robosuite.utils.mjcf_utils import get_ids
+
+def matches_pattern(s, exclude_body):
+    pattern = rf"(^{exclude_body}_|_{exclude_body}_|_{exclude_body}$)"
+    return re.search(pattern, s) is not None
 
 def get_subtree_geom_ids_by_group(model: mujoco.MjModel, body_id: int, group: int) -> list[int]:
     """Get all geoms belonging to a subtree starting at a given body, filtered by group.
@@ -113,6 +118,8 @@ class Task(MujocoWorldBase):
             # Merge this object
             self.merge_assets(mujoco_obj)
             self.worldbody.append(mujoco_obj.get_obj())
+            if mujoco_obj not in self.mujoco_objects:
+                self.mujoco_objects.append(mujoco_obj)
 
     def generate_id_mappings(self, sim):
         """
@@ -129,8 +136,11 @@ class Task(MujocoWorldBase):
         self._site_ids_to_classes = {}
 
         models = [model for model in self.mujoco_objects]
+        robot_models = []
         for robot in self.mujoco_robots:
             models += [robot] + robot.models
+            robot_models.append(robot)
+            robot_models += robot.models
 
         worldbody = self.mujoco_arena.root.find("worldbody")
         exclude_bodies = ["table"]
@@ -141,10 +151,14 @@ class Task(MujocoWorldBase):
         ]
         models.extend(top_level_bodies)
 
+        exclude_geoms = ["table", "wall", "floor", "counter", "room"]
+        # exclude_geoms = []
         # Parse all mujoco models from robots and objects
         for model in models:
             if isinstance(model, str):
                 body_name = model
+                if any([matches_pattern(body_name.lower(), exclude_body) for exclude_body in exclude_geoms]):
+                    continue
                 visual_group_number = 1
                 body_id = sim.model.body_name2id(body_name)
                 inst, cls = body_name, body_name
@@ -154,10 +168,19 @@ class Task(MujocoWorldBase):
                 # Grab model class name and visual IDs
                 cls = str(type(model)).split("'")[1].split(".")[-1]
                 inst = model.name
+                if any([matches_pattern(inst.lower(), exclude_body) for exclude_body in exclude_geoms]):
+                    continue
                 id_groups = [
                     get_ids(sim=sim, elements=model.visual_geoms + model.contact_geoms, element_type="geom"),
                     get_ids(sim=sim, elements=model.sites, element_type="site"),
                 ]
+                if model not in robot_models:
+                    body_id = sim.model.body_name2id(model.root_body)
+                    extended_geom_ids = get_subtree_geom_ids_by_group(sim.model, body_id, 1)
+                    # added extended_geom_ids if not present in ids_groups[0]
+                    for geom_id in extended_geom_ids:
+                        if geom_id not in id_groups[0]:
+                            id_groups[0].append(geom_id)
             group_types = ("geom", "site")
             ids_to_instances = (self._geom_ids_to_instances, self._site_ids_to_instances)
             ids_to_classes = (self._geom_ids_to_classes, self._site_ids_to_classes)
