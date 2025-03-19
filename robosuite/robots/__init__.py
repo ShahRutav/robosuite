@@ -28,6 +28,7 @@ ROBOT_CLASS_MAPPING = {
     "GR1FixedLowerBody": LeggedRobot,
     "GR1ArmsOnly": LeggedRobot,
     "GR1TwoFingered": LeggedRobot,
+    "GR1TwoHand": LeggedRobot,
     "GR1SingleHand": LeggedRobot,
     "GR1FloatingBody": LeggedRobot,
     "PandaDexRH": FixedBaseRobot,

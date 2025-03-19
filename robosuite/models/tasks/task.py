@@ -168,6 +168,8 @@ class Task(MujocoWorldBase):
                 # Grab model class name and visual IDs
                 cls = str(type(model)).split("'")[1].split(".")[-1]
                 inst = model.name
+                if model in self.mujoco_robots: # skipping robot models as segmentations
+                    continue
                 if any([matches_pattern(inst.lower(), exclude_body) for exclude_body in exclude_geoms]):
                     continue
                 id_groups = [

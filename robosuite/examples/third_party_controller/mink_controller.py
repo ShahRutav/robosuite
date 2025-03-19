@@ -252,6 +252,25 @@ class IKSolverMink:
 
         return action_split_indexes
 
+    def frame_transform_matrix(self, src_frame: Literal["world", "base"], dst_frame: Literal["world", "base"] ):
+        """
+            Returns the transformation matrix from src_frame to dst_frame.
+            Use case: frame_transform_matrix(src_frame, dst_frame) @ pose_in_src_frame = pose_in_dst_frame
+        """
+        if src_frame == dst_frame:
+            return np.eye(4)
+        self.configuration.model.body("robot0_base").pos = self.full_model.body("robot0_base").pos
+        self.configuration.model.body("robot0_base").quat = self.full_model.body("robot0_base").quat
+        self.configuration.update()
+        if dst_frame == "world":
+            assert src_frame == "base"
+            mat = self.configuration.get_transform_frame_to_world("robot0_base", "body").as_matrix()
+        elif dst_frame == "base":
+            assert src_frame == "world"
+            mat = self.configuration.get_transform_frame_to_world("robot0_base", "body").as_matrix()
+            mat = np.linalg.inv(mat)
+        return mat
+
     def transform_pose(
         self, src_frame_pose: np.ndarray, src_frame: Literal["world", "base"], dst_frame: Literal["world", "base"]
     ) -> np.ndarray:

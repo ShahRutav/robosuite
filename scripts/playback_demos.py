@@ -35,7 +35,7 @@ import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
 
-from icrt.util.casa_utils import reset_to
+from icrt.util.casa_utils import reset_to, get_zero_action, load_controller_config
 
 import matplotlib
 matplotlib.use('Agg')
@@ -307,15 +307,7 @@ if __name__ == "__main__":
     if any(['GR1' in robot for robot in env_info["robots"]]):
         args.controller = "WHOLE_BODY_MINK_IK"
 
-    controller_config = load_composite_controller_config(
-        controller=args.controller,
-        robot=env_info["robots"][0],
-    )
-
-    controller_config['body_parts']['right']['input_type'] = control_type
-    controller_config['body_parts']['right']['input_ref_frame'] = ref_frame
-    if (args.controller) and ("WHOLE_BODY" in args.controller):
-        controller_config['composite_controller_specific_configs']['ik_input_ref_frame'] = ref_frame
+    controller_config = load_controller_config(args.controller, env_info["robots"][0], control_type, ref_frame)
     args.overwrite_ref_frame = None
     if env_info["controller_configs"]["body_parts"]["right"]["input_ref_frame"] != ref_frame:
         print(f"Overwriting ref_frame: {env_info['controller_configs']['body_parts']['right']['input_ref_frame']} -> {ref_frame}")
@@ -335,6 +327,7 @@ if __name__ == "__main__":
         ignore_done=True,
         use_camera_obs=False,
         reward_shaping=True,
+        camera_names=["agentview_left"],
         renderer="mjviewer",
     )
     # assert ref_frame == env.robots[0].composite_controller.composite_controller_specific_config.get("ik_input_ref_frame"), f"Ref frame mismatch: {ref_frame} != {env.robots[0].composite_controller.composite_controller_specific_config.get('ik_input_ref_frame')}"
@@ -397,12 +390,10 @@ if __name__ == "__main__":
         else:
             reset_to(env, initial_state, replace_robot_joints=args.replace_robot_joints, change_to_gr1=args.change_to_gr1)
 
-        zero_action = np.zeros(env.action_dim)
         # controller has absolute actions, so we need to set the initial action to be the current position
         active_robot = env.robots[0]
-        arm = "right"
-        if active_robot.part_controllers[arm].input_type == "absolute":
-            zero_action = convert_delta_to_abs_action(zero_action, active_robot, arm, env)
+
+        zero_action = get_zero_action(env)
         env.step(zero_action)
 
         '''
@@ -509,6 +500,27 @@ if __name__ == "__main__":
                         action_rot = T.quat2axisangle(T.mat2quat(action_h[:3, :3]))
                         action_trans = action_h[:3, 3]
                         action = np.concatenate((action_trans, action_rot, action[6:]), axis=-1)
+                    elif args.overwrite_ref_frame == "base_world":
+                        if active_robot.composite_controller_config["type"] in ["WHOLE_BODY_IK", "WHOLE_BODY_MINK_IK"]:
+                            transform_matrix = env.robots[0].composite_controller.joint_action_policy.frame_transform_matrix('base', 'world')
+                            action_mat1 = T.make_pose(action[:3], T.quat2mat(T.axisangle2quat(action[3:6])))
+                            action_h1 = transform_matrix @ action_mat1
+                            action_h2 = None
+                            if action.shape[0] == 14:
+                                action_mat2 = T.make_pose(action[6:9], T.quat2mat(T.axisangle2quat(action[9:12])))
+                                action_h2 = transform_matrix @ action_mat2
+                        else:
+                            raise NotImplementedError(f"Controller type {active_robot.composite_controller_config['type']} not implemented")
+                        action_rot1 = T.quat2axisangle(T.mat2quat(action_h1[:3, :3]))
+                        action_trans1 = action_h1[:3, 3]
+                        action1 = np.concatenate((action_trans1, action_rot1))
+                        if action_h2 is not None:
+                            action_rot2 = T.quat2axisangle(T.mat2quat(action_h2[:3, :3]))
+                            action_trans2 = action_h2[:3, 3]
+                            action2 = np.concatenate((action_trans2, action_rot2))
+                            action = np.concatenate((action1, action2, action[12:]), axis=-1)
+                        else:
+                            action = np.concatenate((action1, action[6:]), axis=-1)
                     else:
                         raise NotImplementedError(f"Ref frame {args.overwrite_ref_frame} not implemented")
                 _action = action

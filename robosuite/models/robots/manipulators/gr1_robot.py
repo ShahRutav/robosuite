@@ -303,3 +303,47 @@ class GR1SingleHand(GR1):
     @property
     def arm_type(self):
         return "single"
+
+class GR1TwoHand(GR1):
+    arms = ["left", "right"]
+    def __init__(self, idn=0):
+        super().__init__(idn=idn)
+
+        # fix lower body
+        self.use_torso = True
+        self._remove_joint_actuation("leg")
+        self._remove_joint_actuation("head")
+        self._remove_free_joint()
+    @property
+    def default_gripper(self):
+        return {"right": "FourierRightHand", "left": "FourierLeftHand"}
+
+    @property
+    def gripper_mount_quat_offset(self):
+        return {"right": [0.0, 0.0, 0.0, 1.0], "left": [0.0, 0.0, 0.0, 1.0]}
+
+    @property
+    def arm_type(self):
+        return "bimanual"
+
+    @property
+    def default_controller_config(self):
+        # Copied from panda.py
+        return {"right": "default_gr1_fixed_lower_body", "left": "default_gr1_fixed_lower_body"}
+
+    @property
+    def init_qpos(self):
+        """
+        Since this is bimanual robot, returns [right, left] array corresponding to respective values
+
+        Note that this is a pose such that the arms are half extended
+
+        Returns:
+            np.array: default initial qpos for the right, left arms
+        """
+        right_arm_init = np.array([0.0, -0.1, 0.0, -1.57, 0.0, 0.0, 0.0])
+        left_arm_init = np.array([0.0, 0.1, 0.0, -1.57, 0.0, 0.0, 0.0])
+        init_qpos = np.array([0.0] * 17)
+        init_qpos[3:10] = right_arm_init
+        init_qpos[10:17] = left_arm_init
+        return init_qpos

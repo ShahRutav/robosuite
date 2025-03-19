@@ -1,4 +1,5 @@
 import argparse
+import json
 import numpy as np
 import xml.etree.ElementTree as ET
 
@@ -58,14 +59,18 @@ def set_camera_look_at(env, camera_name, object_name, distance=1.0, up=(0, 0, 1)
         up (tuple or list): The up vector to define the camera's 'up'.
     """
     # 1) Get the object's position from the simulator
-    object_pos = env.sim.data.get_body_xpos(object_name)
+    object_pos = None
+    if hasattr(env, "sim"):
+        object_pos = env.sim.data.get_body_xpos(object_name)
+    else:
+        object_pos = env.env.sim.data.get_body_xpos(object_name)
     if object_pos is None:
         raise ValueError(f"Body '{object_name}' does not exist in this environment!")
 
     # 2) Decide where the camera should be placed.
     #    For example: behind the object along negative y-axis by 'distance'
-    new_dist = distance ** 0.5 / 2
-    camera_pos = np.array([object_pos[0], object_pos[1] - distance, object_pos[2] + new_dist])
+    new_dist = (distance ** 0.5) * 2
+    camera_pos = np.array([object_pos[0]-0.5, object_pos[1]+0.01, object_pos[2] + 0.07])
 
     # 3) Use the original function to get the camera's x-axis and y-axis
     x_axis, y_axis = get_camera_axes(
@@ -92,9 +97,15 @@ def set_camera_look_at(env, camera_name, object_name, distance=1.0, up=(0, 0, 1)
     ])
 
     # 7) Assign the new camera position + orientation to MuJoCo
-    cam_id = env.sim.model.camera_name2id(camera_name)
-    env.sim.model.cam_pos[cam_id] = camera_pos
-    env.sim.model.cam_quat[cam_id] = camera_quat_wxyz
+    cam_id = None
+    if hasattr(env, "sim"):
+        cam_id = env.sim.model.camera_name2id(camera_name)
+        env.sim.model.cam_pos[cam_id] = camera_pos
+        env.sim.model.cam_quat[cam_id] = camera_quat_wxyz
+    else:
+        cam_id = env.env.sim.model.camera_name2id(camera_name)
+        env.env.sim.model.cam_pos[cam_id] = camera_pos
+        env.env.sim.model.cam_quat[cam_id] = camera_quat_wxyz
 
     # Return the final position + orientation in MuJoCo's (w, x, y, z) format
     return camera_pos, camera_quat_wxyz
@@ -122,7 +133,7 @@ if __name__ == "__main__":
             render_camera=args.camera_name,
             use_camera_obs=False,
             control_freq=20,
-            camera_names=args.camera_name,
+            camera_names=[args.camera_name],
         )
     else:
         image_modalities = ["robot0_agentview_left", "robot0_agentview_right"]
@@ -131,6 +142,8 @@ if __name__ == "__main__":
                 "rgb": image_modalities,
             }
         }
+        env_meta_file = "/home/rutavms/research/gaze/icrt/robocasa/scene_configs/SinkPlayEnvTrain/training/ep_meta_000.json"
+        env_meta = json.load(open(env_meta_file, "r"))
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs)
         env = EnvRobocasa(
             env_name=args.env,
@@ -139,9 +152,16 @@ if __name__ == "__main__":
             has_offscreen_renderer=False,
             render=True,
             use_camera_obs=False,
-            camera_names=args.camera_name,
+            camera_names=[args.camera_name],
+            ep_meta=env_meta,
         )
-    env.reset()
+    for _ in range(10):
+        try:
+            env.reset()
+            break
+        except Exception as e:
+            print(f"Error: {e}")
+            pass
 
     if not args.no_update:
         # Actually set the camera to look at the chosen object
@@ -173,6 +193,11 @@ if __name__ == "__main__":
     # 5. Run a loop so you can visualize
     # ---------------------------------------------------
     while True:
-        env.step(np.zeros(env.action_dim))  # no-op action
+        action = None
+        if hasattr(env, "action_dim"):
+            action = np.zeros(env.action_dim)
+        else:
+            action = np.zeros(env.action_dimension)
+        env.step(action)  # no-op action
         env.render()
 
