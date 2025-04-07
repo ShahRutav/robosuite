@@ -32,6 +32,13 @@ class FourierLeftHand(GripperModel):
         return np.array([1.83157812, 0.0029788, 0.00743951, 0.14403124, 0.04400525, 0.15292447, 0.05207598, 0.14401271, 0.04400369, 0.13652065, 0.03757485])
 
     @property
+    def grasp_qpos(self):
+        return {
+            -1: np.array([-1.5, -1.5, -1.5, -1.5, -3, 3]),  # open
+            1: np.array([1.5, 1.5, 1.5, 1.5, 3, 3]),  # close
+        }
+
+    @property
     def speed(self):
         return 0.15
 
@@ -99,6 +106,13 @@ class FourierRightHand(GripperModel):
     @property
     def init_qpos(self):
         return np.array([1.83157812, 0.0029788, 0.00743951, 0.14403124, 0.04400525, 0.15292447, 0.05207598, 0.14401271, 0.04400369, 0.13652065, 0.03757485])
+
+    @property
+    def grasp_qpos(self):
+        return {
+            -1: np.array([-1.5, -1.5, -1.5, -1.5, -3, 3]),  # open
+            1: np.array([1.5, 1.5, 1.5, 1.5, 3, 3]),  # close
+        }
 
     @property
     def speed(self):
