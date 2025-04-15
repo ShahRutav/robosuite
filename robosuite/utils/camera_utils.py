@@ -242,6 +242,20 @@ def bilinear_interpolate(im, x, y):
 
     return wa * Ia + wb * Ib + wc * Ic + wd * Id
 
+def find_direct_parent(root, target):
+    """
+    Recursively search from 'root' to find the element
+    whose *immediate* child is 'target'. Return that element, or None.
+    """
+    # Check each of root's immediate children
+    for child in root:
+        if child is target:
+            return root  # root is the direct parent
+        # Otherwise recurse into child
+        found = find_direct_parent(child, target)
+        if found is not None:
+            return found
+    return None
 
 class CameraMover:
     """
@@ -278,6 +292,16 @@ class CameraMover:
 
         # Modify xml to add mocap to move camera around
         xml = self.modify_xml_for_camera_movement(xml=xml, camera_name=self.camera)
+        if hasattr(self.env, "_cam_configs"):
+            self.env._cam_configs.pop(self.camera, None)
+        if hasattr(self.env, "env") and hasattr(self.env.env, "_cam_configs"):
+            self.env.env._cam_configs.pop(self.camera, None)
+        # check how many tages with the name camera are in the xml
+        # print("Cameras in final tree:")
+        # for c in ET.fromstring(xml).findall(".//camera"):
+        #     print("   name=", c.get("name"))
+        # with open("modified.xml", "w") as f:
+        #     f.write(xml)
 
         # Reset the environment and restore the state
         self.env.reset_from_xml_string(xml)
@@ -342,7 +366,8 @@ class CameraMover:
 
         # find the correct camera
         camera_elem = None
-        cameras = wb.findall("camera")
+        # cameras = wb.findall("camera")
+        cameras = wb.findall(".//camera")
         for camera in cameras:
             if camera.get("name") == camera_name:
                 camera_elem = camera
@@ -361,7 +386,9 @@ class CameraMover:
         new_camera.set("pos", "0 0 0")
 
         # remove old camera element
-        wb.remove(camera_elem)
+        camera_parent = find_direct_parent(wb, camera_elem)
+        assert camera_parent is not None
+        camera_parent.remove(camera_elem)
 
         return ET.tostring(tree, encoding="utf8").decode("utf8")
 

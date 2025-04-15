@@ -171,10 +171,6 @@ class DemoTwoHand(Demo):
         Returns:
             dict: Dictionary containing arm-specific eef names
         """
-        # return {"right-eef": "right_gripper_mount",
-        #         "right-tool": "right_tool_mount",
-        #         "left-eef": "left_gripper_mount",
-        #         "left-tool": "left_tool_mount"}
         return {
             "right": "right_gripper_mount", # merge name
             "left": "left_gripper_mount",
