@@ -42,7 +42,7 @@
                 "disable_grav_comp": true,
                 "gripper": {
                     "type": "GRIP",
-                    "use_action_scaling": false
+                    "use_action_scaling": true
                 }
             },
             "left": {
@@ -62,7 +62,7 @@
                 "disable_grav_comp": true,
                 "gripper": {
                     "type": "GRIP",
-                    "use_action_scaling": false
+                    "use_action_scaling": true
                 }
             }
         },
