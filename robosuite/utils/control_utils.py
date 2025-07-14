@@ -1,12 +1,11 @@
 import numpy as np
-
 import robosuite.utils.transform_utils as trans
 from robosuite.utils.numba import jit_decorator
 
 
 
 def convert_delta_to_abs_action(delta_action, robot, arm, env=None):
-    assert delta_action.shape[0] == 7, f"Delta action should be of shape (7,) but is {delta_action.shape}"
+    assert (delta_action.shape[0] == 7), f"Delta action should be of shape (7,) but is {delta_action.shape}"
     # check if the class has an attribute function to convert delta to absolute action
     if hasattr(robot.part_controllers[arm], "delta_to_abs_action"):
         abs_action = robot.part_controllers[arm].delta_to_abs_action(delta_action[:-1], goal_update_mode="achieved")

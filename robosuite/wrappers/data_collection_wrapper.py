@@ -36,6 +36,9 @@ class DataCollectionWrapper(Wrapper):
         self.action_infos = []  # stores information about actions taken
         self.successful = False  # stores success state of demonstration
         self.obs = []  # stores observations
+        # 0: teleoperation; 1: exploration policy
+        self.policy_mode = 0
+        self.policy_mode_list = [] # stores policy mode for each step
 
         # how often to save simulation state, in terms of environment steps
         self.collect_freq = collect_freq
@@ -56,6 +59,10 @@ class DataCollectionWrapper(Wrapper):
         # some variables for remembering the current episode's initial state and model xml
         self._current_task_instance_state = None
         self._current_task_instance_xml = None
+
+    def set_policy_mode(self, policy_mode):
+        assert policy_mode in [0, 1], "Policy mode must be 0 (teleoperation) or 1 (exploration policy)"
+        self.policy_mode = policy_mode
 
     def _start_new_episode(self):
         """
@@ -123,6 +130,7 @@ class DataCollectionWrapper(Wrapper):
 
         assert len(self.obs) == 0
         self.obs.append(self.env._get_observations())
+        self.policy_mode_list.append(self.policy_mode)
 
     def _flush(self):
         """
@@ -145,6 +153,7 @@ class DataCollectionWrapper(Wrapper):
             action_infos=self.action_infos,
             successful=self.successful,
             obs=self.obs,
+            policy_mode_list=np.array(self.policy_mode_list),
             initial_obj_qpos=self.initial_obj_qpos.copy(),
             initial_qpos=self.initial_qpos.copy(),
             non_robot_qpos_idx=non_robot_qpos_idx,
@@ -153,6 +162,7 @@ class DataCollectionWrapper(Wrapper):
         self.states = []
         self.obs = []
         self.action_infos = []
+        self.policy_mode_list = []
         self.successful = False
 
     def reset(self):
@@ -205,6 +215,7 @@ class DataCollectionWrapper(Wrapper):
             self.states.append(state)
 
             self.obs.append(self.env._get_observations())
+            self.policy_mode_list.append(self.policy_mode)
 
             info = {}
             info["actions"] = np.array(action)
