@@ -160,6 +160,8 @@ class Task(MujocoWorldBase):
                 if any([matches_pattern(body_name.lower(), exclude_body) for exclude_body in exclude_geoms]):
                     continue
                 visual_group_number = 1
+                if not body_name in sim.model.body_names: # this can happen as Arena adds left and right eef target but the sim doesn't have both arms
+                    continue
                 body_id = sim.model.body_name2id(body_name)
                 inst, cls = body_name, body_name
                 geom_ids = get_subtree_geom_ids_by_group(sim.model, body_id, visual_group_number)
