@@ -20,7 +20,7 @@ from robosuite.controllers.composite.composite_controller import WholeBody
 from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 
 
-def collect_human_trajectory(env, device, arm, max_fr):
+def collect_human_trajectory(env, device, arm, max_fr, goal_update_mode):
     """
     Use the device (keyboard or SpaceNav 3D mouse) to collect a demonstration.
     The rollout trajectory is saved to files in npz format.
@@ -61,7 +61,7 @@ def collect_human_trajectory(env, device, arm, max_fr):
         active_robot = env.robots[device.active_robot]
 
         # Get the newest action
-        input_ac_dict = device.input2action()
+        input_ac_dict = device.input2action(goal_update_mode=goal_update_mode)
 
         # If action is none, then this a reset so we should break
         if input_ac_dict is None:
@@ -295,6 +295,15 @@ if __name__ == "__main__":
         default=False,
         help="(DualSense Only)Reverse the effect of the x and y axes of the joystick.It is used to handle the case that the left/right and front/back sides of the view are opposite to the LX and LY of the joystick(Push LX up but the robot move left in your view)",
     )
+    parser.add_argument(
+        "--goal_update_mode",
+        type=str,
+        default="target",
+        choices=["target", "achieved"],
+        help="Used by the device to get the arm's actions. The mode to update the goal in. Can be 'target' or 'achieved'. If 'target', the goal is updated based on the current target pose. "
+        "If 'achieved', the goal is updated based on the current achieved state. "
+        "We recommend using 'achieved' (and input_ref_frame='base') if collecting demonstrations with a mobile base robot.",
+    )
     args = parser.parse_args()
 
     # Get controller config
@@ -308,6 +317,10 @@ if __name__ == "__main__":
         from robosuite.examples.third_party_controller.mink_controller import WholeBodyMinkIK
     controller_config['body_parts']['right']['input_type'] = "absolute"
     controller_config['body_parts']['right']['input_ref_frame'] = "world"
+
+    # if WHOLE BODY IK; assert only one robot
+    if controller_config["type"] == "WHOLE_BODY_IK":
+        assert len(args.robots) == 1, "Whole Body IK only supports one robot"
 
     # Create argument configuration
     config = {
