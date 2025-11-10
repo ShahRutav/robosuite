@@ -31,7 +31,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=13237357" />
-    <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=81f6180a" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=96be8719" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
@@ -1000,9 +1000,9 @@ which should be interpreted accordingly by any subclasses.</p></li>
 custom controller. Else, uses the default controller for this specific task. Should either be single
 dict if same controller is to be used for all robots or else it should be a list of the same length as
 “robots” param</p></li>
-<li><p><strong>mount_types</strong> (<em>None</em><em> or </em><em>str</em><em> or </em><em>list</em><em> of </em><em>str</em>) – type of mount, used to instantiate mount models from mount factory.
+<li><p><strong>mount_types</strong> (<em>str</em><em> or </em><em>list</em><em> of </em><em>str</em>) – type of mount, used to instantiate mount models from mount factory.
 Default is “default”, which is the default mount associated with the robot(s) the ‘robots’ specification.
-None results in no mount, and any other (valid) model overrides the default mount. Should either be
+“NullMount” results in no mount, and any other (valid) model overrides the default mount. Should either be
 single str if same mount type is to be used for all robots or else it should be a list of the same
 length as “robots” param</p></li>
 <li><p><strong>initialization_noise</strong> (<em>dict</em><em> or </em><em>list</em><em> of </em><em>dict</em>) – <p>Dict containing the initialization noise parameters.
