@@ -412,13 +412,6 @@ class MujocoEnv(metaclass=EnvMeta):
                 continue
             observations[modality] = np.concatenate(obs, axis=-1)
 
-        # add extra joint states to the observations for all but robot indexes
-        robot_idx = [self.robots[i]._ref_joint_pos_indexes for i in range(len(self.robots))]
-        robot_idx = [item for sublist in robot_idx for item in sublist]
-        non_robot_qpos_idx = set(range(self.sim.get_state().qpos.flatten().shape[0])) - set(robot_idx)
-        obj_joint_states = self.sim.get_state().qpos.flatten()[list(non_robot_qpos_idx)] # this also include fixture joints
-        observations["objects-joint-state"] = obj_joint_states
-
         return observations
 
     def step(self, action):
